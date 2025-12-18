@@ -1,0 +1,918 @@
+# -*- coding: utf-8 -*-
+"""
+KKBox Churn Prediction Dashboard
+================================
+작성자: 이도훈 (LDH)
+작성일: 2025-12-17
+
+Streamlit 기반 이탈 예측 대시보드
+"""
+
+import streamlit as st
+
+# 페이지 설정
+st.set_page_config(
+    page_title="KKBox Churn Prediction",
+    page_icon="🎵",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# CSS 스타일링 - 라이트 테마
+st.markdown("""
+<style>
+    /* 전체 폰트 및 배경 */
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    code, .stCode {
+        font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* 메인 배경 - 밝은 그라데이션 */
+    .stApp {
+        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 50%, #f1f5f9 100%);
+    }
+    
+    /* 사이드바 스타일 - 밝은 배경 */
+    [data-testid="stSidebar"] {
+        background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        border-right: 1px solid #e2e8f0;
+    }
+    
+    [data-testid="stSidebar"] .stRadio label {
+        color: #334155;
+        font-weight: 500;
+    }
+    
+    /* 메트릭 카드 */
+    [data-testid="stMetricValue"] {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1e40af !important;
+    }
+    
+    [data-testid="stMetricLabel"] {
+        color: #475569;
+        font-weight: 500;
+    }
+    
+    [data-testid="stMetricDelta"] {
+        color: #059669;
+    }
+    
+    /* 컨테이너 스타일 */
+    .main-header {
+        background: linear-gradient(90deg, #dbeafe, #e0e7ff);
+        border: 1px solid #93c5fd;
+        border-radius: 16px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    }
+    
+    .info-card {
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1rem 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    /* 테이블 스타일 */
+    .dataframe {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    /* 버튼 스타일 */
+    .stButton > button {
+        background: linear-gradient(90deg, #3b82f6, #6366f1);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .stButton > button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+    }
+    
+    /* 탭 스타일 */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 8px;
+        background: #f1f5f9;
+        padding: 4px;
+        border-radius: 10px;
+    }
+    
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        border-radius: 8px;
+        color: #64748b;
+        font-weight: 500;
+    }
+    
+    .stTabs [aria-selected="true"] {
+        background: #ffffff;
+        color: #1e40af;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    /* 프로그레스 바 */
+    .stProgress > div > div {
+        background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    }
+    
+    /* 플레이스홀더 카드 */
+    .placeholder-card {
+        background: #fffbeb;
+        border: 2px dashed #f59e0b;
+        border-radius: 16px;
+        padding: 3rem 2rem;
+        text-align: center;
+    }
+    
+    .placeholder-card h3 {
+        color: #b45309;
+        margin-bottom: 1rem;
+    }
+    
+    /* 성능 지표 배지 */
+    .metric-badge {
+        display: inline-block;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+        margin: 0.25rem;
+    }
+    
+    .metric-badge.excellent {
+        background: #dcfce7;
+        color: #166534;
+        border: 1px solid #86efac;
+    }
+    
+    .metric-badge.good {
+        background: #dbeafe;
+        color: #1e40af;
+        border: 1px solid #93c5fd;
+    }
+    
+    /* 헤더 텍스트 - 어두운 색 */
+    h1, h2, h3, h4 {
+        color: #1e293b !important;
+    }
+    
+    p, li, span {
+        color: #334155;
+    }
+    
+    /* 일반 텍스트 */
+    .stMarkdown {
+        color: #334155;
+    }
+    
+    /* Expander */
+    .streamlit-expanderHeader {
+        background: #f8fafc;
+        color: #1e293b;
+    }
+    
+    /* 입력 필드 */
+    .stTextInput > div > div > input,
+    .stNumberInput > div > div > input,
+    .stSelectbox > div > div {
+        background: #ffffff;
+        border: 1px solid #cbd5e1;
+        color: #1e293b;
+    }
+    
+    /* JSON 표시 */
+    .stJson {
+        background: #f8fafc;
+    }
+    
+    /* 경고/정보 박스 */
+    .stAlert {
+        background: #f0f9ff;
+        color: #0c4a6e;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
+def main():
+    # 사이드바 네비게이션
+    with st.sidebar:
+        st.markdown("# 🎵 KKBox")
+        st.markdown("### Churn Prediction")
+        st.markdown("---")
+        
+        page = st.radio(
+            "📍 Navigation",
+            ["🏠 Home", "📊 데이터 탐색 (EDA)", "🤖 ML 모델 결과", 
+             "🧠 DL 모델 결과", "⚖️ 모델 비교", "🎯 추론 (Inference)"],
+            label_visibility="collapsed"
+        )
+        
+        st.markdown("---")
+        st.markdown("""
+        <div style='text-align: center; color: #64748b; font-size: 0.85rem;'>
+            <p style='color: #64748b;'>👤 작성자: 이도훈 (LDH)</p>
+            <p style='color: #64748b;'>📅 2025-12-17</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # 페이지 라우팅
+    if page == "🏠 Home":
+        show_home()
+    elif page == "📊 데이터 탐색 (EDA)":
+        show_eda()
+    elif page == "🤖 ML 모델 결과":
+        show_ml_results()
+    elif page == "🧠 DL 모델 결과":
+        show_dl_results()
+    elif page == "⚖️ 모델 비교":
+        show_model_comparison()
+    elif page == "🎯 추론 (Inference)":
+        show_inference()
+
+
+def show_home():
+    """홈 페이지"""
+    st.markdown("""
+    <div class="main-header">
+        <h1 style='font-size: 3rem; margin-bottom: 0.5rem; color: #1e3a8a;'>
+            🎵 KKBox Churn Prediction
+        </h1>
+        <p style='font-size: 1.2rem; color: #475569;'>
+            머신러닝 & 딥러닝 기반 고객 이탈 예측 시스템
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # 프로젝트 개요
+    col1, col2, col3 = st.columns(3)
+    
+    with col1:
+        st.markdown("""
+        <div class="info-card">
+            <h3 style='color: #1e40af;'>🎯 프로젝트 목표</h3>
+            <p style='color: #334155;'>이탈 가능성이 높은 고객을 사전에 식별하여 선제적 대응 전략 수립</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        st.markdown("""
+        <div class="info-card">
+            <h3 style='color: #1e40af;'>📊 문제 유형</h3>
+            <p style='color: #334155;'>이진 분류 (Binary Classification)<br/>
+            타겟: is_churn (1=이탈, 0=유지)</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col3:
+        st.markdown("""
+        <div class="info-card">
+            <h3 style='color: #1e40af;'>⏰ 예측 프레임</h3>
+            <p style='color: #334155;'>관측 윈도우: 2017-03-01 ~ 03-31<br/>
+            예측 시점(T): 2017-04-01</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # 데이터셋 정보
+    st.markdown("### 📁 데이터셋 구성")
+    
+    data_info = {
+        "테이블": ["train_v2.csv", "user_logs_v2.csv", "transactions.csv", "members_v3.csv"],
+        "설명": ["사용자별 이탈 라벨", "일별 음악 청취 로그", "결제/구독 거래 내역", "사용자 기본 정보"],
+        "용도": ["타겟 변수 (Y)", "행동 Feature 생성", "결제 Feature 생성", "정적 Feature"]
+    }
+    
+    import pandas as pd
+    st.dataframe(pd.DataFrame(data_info), use_container_width=True, hide_index=True)
+    
+    st.markdown("---")
+    
+    # 프로젝트 진행 상황
+    st.markdown("### 📈 프로젝트 진행 현황")
+    
+    progress_data = [
+        ("✅ 문제 정의 및 예측 프레임 설정", 100),
+        ("✅ 데이터 전처리 및 Feature Engineering", 100),
+        ("✅ ML 모델 학습 (Logistic Regression, LightGBM)", 100),
+        ("🔄 DL 모델 학습 (MLP)", 0),
+        ("🔄 최적 모델 선정 및 저장", 0),
+        ("🔄 Inference 파이프라인 구축", 0),
+    ]
+    
+    for task, progress in progress_data:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f"**{task}**")
+            st.progress(progress / 100)
+        with col2:
+            if progress == 100:
+                st.markdown(f"<span style='color: #059669; font-weight: bold;'>{progress}%</span>", unsafe_allow_html=True)
+            else:
+                st.markdown(f"<span style='color: #d97706; font-weight: bold;'>{progress}%</span>", unsafe_allow_html=True)
+
+
+def show_eda():
+    """데이터 탐색 페이지"""
+    import pandas as pd
+    import json
+    import os
+    
+    st.markdown("## 📊 데이터 탐색 (EDA)")
+    
+    tab1, tab2, tab3 = st.tabs(["📋 Feature 목록", "📈 데이터 통계", "🎯 클래스 분포"])
+    
+    with tab1:
+        st.markdown("### 학습에 사용된 Feature (35개)")
+        
+        # Feature 목록 로드
+        try:
+            with open("models/feature_cols.json", "r") as f:
+                features = json.load(f)
+            
+            # 카테고리별 분류
+            user_log_features = [f for f in features if any(x in f for x in ['songs', 'secs', 'num_', 'skip', 'complete', 'partial', 'listening', 'avg_song'])]
+            transaction_features = [f for f in features if any(x in f for x in ['payment', 'cancel', 'auto_renew', 'discount', 'transaction', 'plan', 'expire'])]
+            member_features = [f for f in features if any(x in f for x in ['city', 'age', 'registered', 'tenure', 'gender'])]
+            
+            col1, col2, col3 = st.columns(3)
+            
+            with col1:
+                st.markdown("#### 🎧 청취 행동 Feature")
+                for f in user_log_features:
+                    st.markdown(f"- `{f}`")
+                    
+            with col2:
+                st.markdown("#### 💳 결제 Feature")
+                for f in transaction_features:
+                    st.markdown(f"- `{f}`")
+                    
+            with col3:
+                st.markdown("#### 👤 회원 정보 Feature")
+                for f in member_features:
+                    st.markdown(f"- `{f}`")
+                    
+        except FileNotFoundError:
+            st.warning("Feature 목록 파일을 찾을 수 없습니다.")
+    
+    with tab2:
+        st.markdown("### 주요 피처 통계 (30일 윈도우 기준)")
+        
+        stats_data = {
+            "피처": ["num_days_active_w30", "total_secs_w30", "num_songs_w30", "skip_ratio_w30", "completion_ratio_w30"],
+            "Mean": ["16.66", "131,733", "642", "0.20", "0.80"],
+            "Std": ["10.30", "185,227", "829", "0.18", "0.18"],
+            "Min": ["1", "0.3", "1", "0", "0"],
+            "25%": ["7", "13,115", "73", "0.06", "0.71"],
+            "50%": ["18", "67,936", "354", "0.15", "0.85"],
+            "75%": ["26", "173,934", "877", "0.29", "0.94"],
+            "Max": ["31", "2,406,313", "11,490", "1.0", "1.0"]
+        }
+        
+        st.dataframe(pd.DataFrame(stats_data), use_container_width=True, hide_index=True)
+        
+        st.markdown("### 추세 피처 통계")
+        
+        trend_data = {
+            "피처": ["secs_trend_w7_w30", "recency_secs_ratio", "skip_trend_w7_w30", "completion_trend_w7_w30"],
+            "Mean": ["0.23", "0.23", "-0.05", "-0.10"],
+            "Std": ["0.22", "0.22", "0.19", "0.28"],
+            "해석": ["평균적으로 최근 7일이 전체의 23%", "동일 (7/30 ≈ 23%)", "평균적으로 스킵율 5%p 감소", "평균적으로 완주율 10%p 감소"]
+        }
+        
+        st.dataframe(pd.DataFrame(trend_data), use_container_width=True, hide_index=True)
+    
+    with tab3:
+        st.markdown("### 클래스 분포 (Train Set)")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # 클래스 분포 시각화
+            import plotly.express as px
+            
+            class_dist = pd.DataFrame({
+                'Class': ['Retention (0)', 'Churn (1)'],
+                'Count': [618541, 61131],
+                'Percentage': [91.0, 9.0]
+            })
+            
+            fig = px.pie(
+                class_dist, 
+                values='Count', 
+                names='Class',
+                color_discrete_sequence=['#3b82f6', '#ef4444'],
+                hole=0.4
+            )
+            fig.update_traces(textposition='inside', textinfo='percent+label', textfont_color='white')
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='#1e293b'),
+                showlegend=False
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            
+        with col2:
+            st.markdown("""
+            <div class="info-card">
+                <h4 style='color: #1e40af;'>📊 클래스 불균형 현황</h4>
+                <ul style='color: #334155;'>
+                    <li><strong>유지 (Retention)</strong>: 618,541명 (91%)</li>
+                    <li><strong>이탈 (Churn)</strong>: 61,131명 (9%)</li>
+                </ul>
+                <h4 style='color: #1e40af;'>⚖️ 불균형 처리 방법</h4>
+                <ul style='color: #334155;'>
+                    <li>Logistic Regression: class_weight='balanced'</li>
+                    <li>LightGBM: scale_pos_weight ≈ 10.1</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
+
+
+def show_ml_results():
+    """ML 모델 결과 페이지"""
+    import pandas as pd
+    import json
+    import plotly.express as px
+    import plotly.graph_objects as go
+    
+    st.markdown("## 🤖 ML 모델 학습 결과")
+    
+    # 결과 로드
+    try:
+        with open("models/training_results.json", "r") as f:
+            results = json.load(f)
+    except FileNotFoundError:
+        st.error("학습 결과 파일을 찾을 수 없습니다.")
+        return
+    
+    tab1, tab2, tab3 = st.tabs(["📊 성능 비교", "📈 Feature Importance", "🔧 하이퍼파라미터"])
+    
+    with tab1:
+        st.markdown("### Test Set 성능 비교")
+        
+        # 메트릭 카드
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### 🔹 Logistic Regression (Baseline)")
+            lr_test = results["Logistic Regression"]["test_metrics"]
+            
+            m1, m2, m3 = st.columns(3)
+            m1.metric("ROC-AUC", f"{lr_test['roc_auc']:.4f}")
+            m2.metric("PR-AUC", f"{lr_test['pr_auc']:.4f}")
+            m3.metric("Recall", f"{lr_test['recall']:.4f}")
+            
+            m4, m5, m6 = st.columns(3)
+            m4.metric("Precision", f"{lr_test['precision']:.4f}")
+            m5.metric("F1-Score", f"{lr_test['f1']:.4f}")
+            m6.metric("Specificity", f"{lr_test['specificity']:.4f}")
+            
+        with col2:
+            st.markdown("#### 🔸 LightGBM")
+            lgb_test = results["LightGBM"]["test_metrics"]
+            
+            m1, m2, m3 = st.columns(3)
+            m1.metric("ROC-AUC", f"{lgb_test['roc_auc']:.4f}", f"+{(lgb_test['roc_auc'] - lr_test['roc_auc']):.4f}")
+            m2.metric("PR-AUC", f"{lgb_test['pr_auc']:.4f}", f"+{(lgb_test['pr_auc'] - lr_test['pr_auc']):.4f}")
+            m3.metric("Recall", f"{lgb_test['recall']:.4f}", f"+{(lgb_test['recall'] - lr_test['recall']):.4f}")
+            
+            m4, m5, m6 = st.columns(3)
+            m4.metric("Precision", f"{lgb_test['precision']:.4f}", f"+{(lgb_test['precision'] - lr_test['precision']):.4f}")
+            m5.metric("F1-Score", f"{lgb_test['f1']:.4f}", f"+{(lgb_test['f1'] - lr_test['f1']):.4f}")
+            m6.metric("Specificity", f"{lgb_test['specificity']:.4f}", f"+{(lgb_test['specificity'] - lr_test['specificity']):.4f}")
+        
+        st.markdown("---")
+        
+        # 바 차트 비교
+        st.markdown("### 지표별 비교 시각화")
+        
+        metrics = ['ROC-AUC', 'PR-AUC', 'Recall', 'Precision', 'F1-Score']
+        lr_values = [lr_test['roc_auc'], lr_test['pr_auc'], lr_test['recall'], lr_test['precision'], lr_test['f1']]
+        lgb_values = [lgb_test['roc_auc'], lgb_test['pr_auc'], lgb_test['recall'], lgb_test['precision'], lgb_test['f1']]
+        
+        fig = go.Figure(data=[
+            go.Bar(name='Logistic Regression', x=metrics, y=lr_values, marker_color='#3b82f6'),
+            go.Bar(name='LightGBM', x=metrics, y=lgb_values, marker_color='#8b5cf6')
+        ])
+        
+        fig.update_layout(
+            barmode='group',
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#1e293b'),
+            yaxis=dict(gridcolor='rgba(100, 116, 139, 0.2)', range=[0, 1]),
+            xaxis=dict(gridcolor='rgba(100, 116, 139, 0.2)'),
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Confusion Matrix
+        st.markdown("### Confusion Matrix (Test Set)")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Logistic Regression")
+            cm_lr = [
+                [lr_test['true_negative'], lr_test['false_positive']],
+                [lr_test['false_negative'], lr_test['true_positive']]
+            ]
+            
+            fig_lr = px.imshow(
+                cm_lr,
+                labels=dict(x="Predicted", y="Actual", color="Count"),
+                x=['Retention', 'Churn'],
+                y=['Retention', 'Churn'],
+                color_continuous_scale='Blues',
+                text_auto=True
+            )
+            fig_lr.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='#1e293b')
+            )
+            st.plotly_chart(fig_lr, use_container_width=True)
+            
+        with col2:
+            st.markdown("#### LightGBM")
+            cm_lgb = [
+                [lgb_test['true_negative'], lgb_test['false_positive']],
+                [lgb_test['false_negative'], lgb_test['true_positive']]
+            ]
+            
+            fig_lgb = px.imshow(
+                cm_lgb,
+                labels=dict(x="Predicted", y="Actual", color="Count"),
+                x=['Retention', 'Churn'],
+                y=['Retention', 'Churn'],
+                color_continuous_scale='Purples',
+                text_auto=True
+            )
+            fig_lgb.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='#1e293b')
+            )
+            st.plotly_chart(fig_lgb, use_container_width=True)
+    
+    with tab2:
+        st.markdown("### LightGBM Feature Importance (Top 15)")
+        
+        fi = results["LightGBM"]["feature_importance"][:15]
+        fi_df = pd.DataFrame(fi)
+        
+        fig = px.bar(
+            fi_df,
+            x='importance',
+            y='feature',
+            orientation='h',
+            color='importance',
+            color_continuous_scale='Viridis'
+        )
+        
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)',
+            plot_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='#1e293b'),
+            yaxis=dict(autorange='reversed', gridcolor='rgba(100, 116, 139, 0.2)'),
+            xaxis=dict(gridcolor='rgba(100, 116, 139, 0.2)'),
+            showlegend=False,
+            coloraxis_showscale=False
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        st.markdown("""
+        <div class="info-card">
+            <h4 style='color: #1e40af;'>🔍 주요 인사이트</h4>
+            <ol style='color: #334155;'>
+                <li><strong>days_to_expire</strong>: 만료까지 남은 일수가 가장 중요한 이탈 신호</li>
+                <li><strong>auto_renew_rate</strong>: 자동 갱신 비율 - 낮을수록 이탈 위험</li>
+                <li><strong>total_payment</strong>: 총 결제액 - 높은 LTV 고객 식별</li>
+                <li><strong>cancel_count</strong>: 취소 횟수 - 불만족 신호</li>
+            </ol>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with tab3:
+        st.markdown("### 모델 하이퍼파라미터")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("#### Logistic Regression")
+            lr_params = results["Logistic Regression"]["params"]
+            st.json(lr_params)
+            
+        with col2:
+            st.markdown("#### LightGBM")
+            lgb_params = results["LightGBM"]["params"]
+            st.json(lgb_params)
+            
+            st.info(f"🏆 Best Iteration: {results['LightGBM']['best_iteration']}")
+
+
+def show_dl_results():
+    """DL 모델 결과 페이지 (Placeholder)"""
+    st.markdown("## 🧠 DL 모델 학습 결과")
+    
+    st.markdown("""
+    <div class="placeholder-card">
+        <h3>🚧 개발 예정</h3>
+        <p style="color: #78716c; font-size: 1.1rem;">
+            Tabular 데이터 기반 MLP 모델이 아직 학습되지 않았습니다.
+        </p>
+        <hr style="border-color: rgba(217, 119, 6, 0.3); margin: 1.5rem 0;">
+        <h4 style="color: #1e293b;">📋 계획된 내용</h4>
+        <ul style="text-align: left; color: #334155;">
+            <li>Tabular 데이터 기반 MLP 모델 설계 및 학습</li>
+            <li>정규화, 드롭아웃, 조기 종료 적용</li>
+            <li>ML 모델과 동일한 지표 기준 성능 비교</li>
+        </ul>
+        <h4 style="color: #1e293b; margin-top: 1.5rem;">📁 예상 Deliverable</h4>
+        <p style="color: #78716c;">
+            <code>/docs/02_training_report/02_dl_training_results.md</code>
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # 예상 구조 미리보기
+    st.markdown("### 📐 예상 MLP 모델 구조 (참고용)")
+    
+    st.code("""
+# MLP Model Architecture (예시)
+class ChurnMLP(nn.Module):
+    def __init__(self, input_dim, hidden_dims=[256, 128, 64]):
+        super().__init__()
+        
+        layers = []
+        prev_dim = input_dim
+        
+        for hidden_dim in hidden_dims:
+            layers.extend([
+                nn.Linear(prev_dim, hidden_dim),
+                nn.BatchNorm1d(hidden_dim),
+                nn.ReLU(),
+                nn.Dropout(0.3)
+            ])
+            prev_dim = hidden_dim
+        
+        layers.append(nn.Linear(prev_dim, 1))
+        layers.append(nn.Sigmoid())
+        
+        self.network = nn.Sequential(*layers)
+    
+    def forward(self, x):
+        return self.network(x)
+    """, language="python")
+
+
+def show_model_comparison():
+    """모델 비교 페이지"""
+    import pandas as pd
+    import json
+    import plotly.graph_objects as go
+    
+    st.markdown("## ⚖️ 모델 비교")
+    
+    # 결과 로드
+    try:
+        with open("models/training_results.json", "r") as f:
+            results = json.load(f)
+    except FileNotFoundError:
+        st.error("학습 결과 파일을 찾을 수 없습니다.")
+        return
+    
+    st.markdown("### 📊 전체 모델 성능 비교 (Test Set)")
+    
+    # 비교 테이블
+    comparison_data = {
+        "모델": ["Logistic Regression", "LightGBM", "MLP (예정)"],
+        "ROC-AUC": [
+            f"{results['Logistic Regression']['test_metrics']['roc_auc']:.4f}",
+            f"{results['LightGBM']['test_metrics']['roc_auc']:.4f}",
+            "—"
+        ],
+        "PR-AUC": [
+            f"{results['Logistic Regression']['test_metrics']['pr_auc']:.4f}",
+            f"{results['LightGBM']['test_metrics']['pr_auc']:.4f}",
+            "—"
+        ],
+        "Recall": [
+            f"{results['Logistic Regression']['test_metrics']['recall']:.4f}",
+            f"{results['LightGBM']['test_metrics']['recall']:.4f}",
+            "—"
+        ],
+        "Precision": [
+            f"{results['Logistic Regression']['test_metrics']['precision']:.4f}",
+            f"{results['LightGBM']['test_metrics']['precision']:.4f}",
+            "—"
+        ],
+        "F1-Score": [
+            f"{results['Logistic Regression']['test_metrics']['f1']:.4f}",
+            f"{results['LightGBM']['test_metrics']['f1']:.4f}",
+            "—"
+        ],
+        "상태": ["✅ 완료", "✅ 완료", "🔄 예정"]
+    }
+    
+    st.dataframe(pd.DataFrame(comparison_data), use_container_width=True, hide_index=True)
+    
+    st.markdown("---")
+    
+    # 레이더 차트
+    st.markdown("### 🎯 성능 레이더 차트")
+    
+    categories = ['ROC-AUC', 'PR-AUC', 'Recall', 'Precision', 'F1-Score']
+    
+    lr_test = results["Logistic Regression"]["test_metrics"]
+    lgb_test = results["LightGBM"]["test_metrics"]
+    
+    fig = go.Figure()
+    
+    fig.add_trace(go.Scatterpolar(
+        r=[lr_test['roc_auc'], lr_test['pr_auc'], lr_test['recall'], lr_test['precision'], lr_test['f1']],
+        theta=categories,
+        fill='toself',
+        name='Logistic Regression',
+        line_color='#3b82f6'
+    ))
+    
+    fig.add_trace(go.Scatterpolar(
+        r=[lgb_test['roc_auc'], lgb_test['pr_auc'], lgb_test['recall'], lgb_test['precision'], lgb_test['f1']],
+        theta=categories,
+        fill='toself',
+        name='LightGBM',
+        line_color='#8b5cf6'
+    ))
+    
+    fig.update_layout(
+        polar=dict(
+            radialaxis=dict(
+                visible=True,
+                range=[0.4, 1],
+                gridcolor='rgba(100, 116, 139, 0.3)'
+            ),
+            bgcolor='rgba(0,0,0,0)'
+        ),
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font=dict(color='#1e293b'),
+        showlegend=True,
+        legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+    
+    st.markdown("---")
+    
+    # 최적 모델 선정
+    st.markdown("### 🏆 최적 모델 선정")
+    
+    col1, col2 = st.columns([2, 1])
+    
+    with col1:
+        st.markdown("""
+        <div class="info-card" style="border-color: #86efac; background: #f0fdf4;">
+            <h3 style="color: #166534;">🥇 추천 모델: LightGBM</h3>
+            <h4 style="color: #1e293b;">선정 사유</h4>
+            <ul style="color: #334155;">
+                <li><strong>ROC-AUC 0.9887</strong>: 최고 분류 성능</li>
+                <li><strong>PR-AUC 0.9277</strong>: 불균형 데이터에서도 우수</li>
+                <li><strong>Recall 0.9413</strong>: 이탈자의 94% 탐지</li>
+            </ul>
+            <h4 style="color: #1e293b;">주요 이탈 예측 피처</h4>
+            <ol style="color: #334155;">
+                <li><code>days_to_expire</code> - 만료일까지 남은 일수</li>
+                <li><code>auto_renew_rate</code> - 자동 갱신 비율</li>
+                <li><code>total_payment</code> - 총 결제액</li>
+            </ol>
+        </div>
+        """, unsafe_allow_html=True)
+        
+    with col2:
+        st.markdown("#### 성능 요약")
+        st.metric("ROC-AUC", "0.9887", "Best")
+        st.metric("PR-AUC", "0.9277", "Best")
+        st.metric("Recall", "0.9413", "Best")
+
+
+def show_inference():
+    """추론 페이지 (Placeholder)"""
+    import pandas as pd
+    import numpy as np
+    
+    st.markdown("## 🎯 추론 (Inference)")
+    
+    st.markdown("""
+    <div class="placeholder-card">
+        <h3>🚧 개발 예정</h3>
+        <p style="color: #78716c; font-size: 1.1rem;">
+            Inference 파이프라인이 아직 구축되지 않았습니다.
+        </p>
+        <hr style="border-color: rgba(217, 119, 6, 0.3); margin: 1.5rem 0;">
+        <h4 style="color: #1e293b;">📋 계획된 내용</h4>
+        <ul style="text-align: left; color: #334155;">
+            <li>평가 지표 기준 최적 모델 선정</li>
+            <li>학습된 모델 저장</li>
+            <li>전처리부터 추론까지 일관된 inference 코드 작성</li>
+        </ul>
+        <h4 style="color: #1e293b; margin-top: 1.5rem;">📁 예상 Deliverable</h4>
+        <ul style="text-align: left; color: #78716c;">
+            <li><code>/03_trained_model/model_file</code></li>
+            <li><code>/03_trained_model/inference.py</code></li>
+            <li><code>/03_trained_model/model_metadata.md</code></li>
+        </ul>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # 데모 추론 UI (임시)
+    st.markdown("### 🧪 추론 데모 (임시)")
+    st.info("⚠️ 실제 모델이 연결되면 정확한 예측이 가능합니다. 현재는 UI 미리보기입니다.")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("#### 📥 사용자 정보 입력")
+        
+        days_to_expire = st.slider("만료까지 남은 일수", 0, 365, 30)
+        auto_renew_rate = st.slider("자동 갱신 비율", 0.0, 1.0, 0.8)
+        total_payment = st.number_input("총 결제액", min_value=0, value=1500)
+        cancel_count = st.number_input("취소 횟수", min_value=0, value=0)
+        
+        predict_btn = st.button("🔮 이탈 위험 예측", use_container_width=True)
+    
+    with col2:
+        st.markdown("#### 📊 예측 결과")
+        
+        if predict_btn:
+            # 임시 규칙 기반 점수 (실제 모델 연결 전)
+            risk_score = min(1.0, max(0.0, 
+                0.3 * (1 - days_to_expire / 365) +
+                0.3 * (1 - auto_renew_rate) +
+                0.2 * (cancel_count / 5) +
+                0.2 * (1 - min(total_payment, 5000) / 5000)
+            ))
+            
+            if risk_score < 0.3:
+                risk_level = "저위험"
+                risk_color = "#22c55e"
+                risk_emoji = "🟢"
+            elif risk_score < 0.6:
+                risk_level = "중위험"
+                risk_color = "#fbbf24"
+                risk_emoji = "🟡"
+            else:
+                risk_level = "고위험"
+                risk_color = "#ef4444"
+                risk_emoji = "🔴"
+            
+            st.markdown(f"""
+            <div class="info-card" style="text-align: center; border-color: {risk_color};">
+                <h2 style="font-size: 3rem; margin: 0;">{risk_emoji}</h2>
+                <h3 style="color: {risk_color}; margin: 0.5rem 0;">{risk_level}</h3>
+                <p style="font-size: 2rem; font-weight: bold; color: {risk_color};">
+                    {risk_score:.1%}
+                </p>
+                <p style="color: #64748b; font-size: 0.9rem;">
+                    이탈 확률 (데모)
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            st.warning("⚠️ 이 결과는 임시 규칙 기반이며, 실제 모델 연결 후 정확도가 향상됩니다.")
+        else:
+            st.markdown("""
+            <div class="info-card" style="text-align: center;">
+                <p style="color: #475569; font-size: 1.2rem;">
+                    👈 사용자 정보를 입력하고<br/>예측 버튼을 클릭하세요
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+
+
+if __name__ == "__main__":
+    main()
+
