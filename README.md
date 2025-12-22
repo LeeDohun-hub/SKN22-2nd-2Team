@@ -71,6 +71,16 @@
 > **💡 왜 두 개의 모델을 쓰나요? (Two-Track Strategy)**
 > 결제 만료가 임박하거나 해지한 사용자(Active Churn)뿐만 아니라, **아직 돈은 내고 있지만 마음은 떠난 사용자(Silent Churn)를 놓치지 않기 위함**입니다. 이 두 모델의 시너지를 통해 빈틈없는 이탈 관리가 가능합니다.
 
+### 5. 대시보드 구축 (Interactive Dashboard)
+- **Streamlit**을 활용하여 예측 결과와 주요 지표를 시각화
+- **주요 기능**:
+    - Model Guideline
+    - Model Explainability (Z-score 분석 등 V5.2 주요 변수 해석)
+    - Risk Matrix
+    - Marketing Simulator
+
+---
+
 ## 📊 데이터 스키마 (Data Schema & Feature Summary)
 모델 학습에 활용된 핵심 파생 변수(Derived Features) 요약입니다. (V4 Dataset 기준)
 
@@ -90,16 +100,7 @@
 | `skip_passion_index` | 스킵 열정도 | "곡을 듣지 않고 넘기는 비율이 비정상적으로 높은가?" |
 | `last_active_gap` | 마지막 활동 경과일 | "구독은 되어 있는데, 접속을 안 한지 며칠째인가?" |
 
-### 5. 대시보드 구축 (Interactive Dashboard)
-- **Streamlit**을 활용하여 예측 결과와 주요 지표를 시각화
-- **주요 기능**:
-    - Model Guideline
-    - Model Explainability (Z-score 분석 등 V5.2 주요 변수 해석)
-    - Risk Matrix
-    - Marketing Simulator
-
 ---
-
 ## 프로젝트 구조 (Directory Structure)
 
 ```bash
