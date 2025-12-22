@@ -4,7 +4,7 @@ import numpy as np
 import plotly.express as px
 from pathlib import Path
 import sys
-from PIL import Image
+import sys
 import os
 from sklearn.preprocessing import StandardScaler
 
@@ -15,13 +15,7 @@ sys.path.append(str(project_root / "src"))
 
 from ui_components import header, subheader, section_header, apply_global_styles, card
 
-image_dir = project_root / "images/shap"
 
-def load_image(filename):
-    path = image_dir / filename
-    if path.exists():
-        return Image.open(path)
-    return None
 
 def main():
     header("manage_search", "모델 상세 설명 (Model Explainability)", "어떤 요인이 이탈 예측에 가장 큰 영향을 주었는가?")
@@ -56,52 +50,10 @@ def main():
     
     st.divider()
     
-    # 3.2 SHAP Analysis (Offline Images)
-    subheader("analytics", "3.2 모델 신뢰도 및 해석 (SHAP Feature Explainability)")
-    st.caption("※ 샘플 데이터(1000건)에 대해 사전 산출된 SHAP 분포입니다. (Feature Contribution)")
-    
-    # Tabs with text names
-    tab1, tab2 = st.tabs(["V4 모델 (Fact/History)", "V5.2 모델 (Sentiment/Behavior)"])
-    
-    with tab1:
-        section_header("fact_check", "V4 Feature Contribution")
-        img_v4 = load_image("v4_shap_summary.png")
-        if img_v4:
-            st.image(img_v4, caption="V4 Model SHAP Summary")
-            
-            # Replaced st.info with card
-            card("trending_down", "결과론적 변수의 지배력 (Result-Oriented Context)",
-                 ["`has_ever_cancelled`, `avg_amount` 같은 변수는 이탈과 직결된 '강력한 증거'이기에 SHAP 상위권에 위치합니다.",
-                  "Action Point: 이 모델은 '누가(Who)' 나갈지 알려주는 필터링 역할을 수행합니다."],
-                 "#E3F2FD", "#2196F3", "#0D47A1")
-        else:
-            st.error("SHAP plot image not found. Please run `src/modeling/generate_shap_plots.py`.")
-
-    with tab2:
-        section_header("trending_up", "V5.2 Feature Contribution")
-        img_v5 = load_image("v5_2_shap_summary.png")
-        if img_v5:
-            st.image(img_v5, caption="V5.2 Model SHAP Summary")
-            
-            # Replaced st.success with card
-            card("directions_run", "움직이는 지표의 가치 (Actionability & Trigger)",
-                 ["행동 지표는 상위권은 아니더라도, '언제/왜(When/Why)' 나가는지를 설명하는 핵심 단서입니다.",
-                  "Action Point: 마케팅으로 바꿀 수 없는 환경 변수(가입일 등)와 달리, 행동 변수는 푸시나 추천으로 개입 가능한(Actionable) 영역입니다."],
-                  "#E8F5E9", "#4CAF50", "#1B5E20")
-            
-            # Replaced markdown with card
-            card("search", "주요 행동 지표 해석 가이드",
-                 ["`active_decay_rate`: 왼쪽(음수)으로 쏠린 분포는 활동 감소가 시작되는 순간 이탈 톱니바퀴가 돌기 시작함을 의미합니다. (Trigger)",
-                  "`secs_trend_w7_w30`: 변동 폭은 작지만, 결제 만료 수일 전부터 나타나는 확실한 선행 지표입니다. (Early Warning)",
-                  "`last_active_gap`: 0 근처에서의 높은 민감도는 '단 하루의 공백'도 모델이 놓치지 않음을 보여줍니다."],
-                 "#f5f5f5", "#9e9e9e", "#424242")
-        else:
-            st.error("SHAP plot image not found. Please run `src/modeling/generate_shap_plots.py`.")
-
     st.divider()
 
-    # 3.3 Z-Score Analysis
-    subheader("troubleshoot", "3.3 행동 데이터 심층 분석 (Z-Score Deviation)")
+    # 3.2 Z-Score Analysis
+    subheader("troubleshoot", "3.2 행동 데이터 심층 분석 (Z-Score Deviation)")
     st.caption("이탈 유저들은 일반 유저와 비교해 **얼마나 다른 행동 패턴**을 보일까요?")
 
     @st.cache_data
@@ -160,38 +112,76 @@ def main():
         st.plotly_chart(fig_z, use_container_width=True)
         
         # 4. Interpretative Text
-        st.markdown("""
+        # 4. Interpretative Text
+        # Prepare dynamic values
+        val_decay = churn_means.get('active_decay_rate', 0.0)
+        val_trend = churn_means.get('secs_trend_w7_w30', 0.0) # or listening_velocity
+        val_density = churn_means.get('engagement_density', 0.0)
+        val_skip = churn_means.get('skip_passion_index', 0.0)
+
+        st.markdown(f"""
         <div style="background-color: #FAFAFA; padding: 15px; border-radius: 8px; border-left: 4px solid #607D8B;">
-            <p style="margin:0; font-weight:bold; color:#455A64;">📊 데이터 해석 가이드</p>
+            <p style="margin:0; font-weight:bold; color:#455A64;">📊 데이터 해석 가이드 (Real-time)</p>
             <ul style="margin-top:10px; font-size:0.95rem; line-height:1.6;">
-                <li><strong>active_decay_rate (-0.42)</strong>: 이탈자들은 일반 유저보다 <strong>최근 일주일간의 활동량이 평균 대비 매우 크게 감소</strong>했습니다. 이 값이 가장 낮은 음수라는 것은 이탈을 예측하는 가장 강력한 '신호'라는 뜻입니다.</li>
-                <li><strong>secs_trend_w7_w30 (-0.37)</strong>: 이탈자들은 한 달 평균 청취 시간에 비해 <strong>최근 일주일 청취 시간이 눈에 띄게 줄어들었습니다.</strong></li>
-                <li><strong>engagement_density (-0.21)</strong>: 앱에 접속했을 때 머무는 시간이나 활동의 밀도 역시 일반인보다 낮습니다.</li>
-                <li><strong>skip_passion_index (-0.03)</strong>: 이 지표는 0에 매우 가깝습니다. 즉, <strong>스킵 행동 자체는 이탈자와 일반인이 비슷함</strong>을 의미합니다. 스킵 횟수만으로는 이탈을 판단하기 어렵다는 중요한 반증입니다.</li>
+                <li><strong>active_decay_rate ({val_decay:.2f})</strong>: 이탈자들은 일반 유저보다 <strong>최근 일주일간의 활동량이 평균 대비 감소</strong>했습니다. (음수일수록 위험)</li>
+                <li><strong>secs_trend_w7_w30 ({val_trend:.2f})</strong>: 이탈자들은 한 달 평균 청취 시간에 비해 <strong>최근 일주일 청취 시간이 변화</strong>했습니다.</li>
+                <li><strong>engagement_density ({val_density:.2f})</strong>: 앱에 접속했을 때 머무는 시간이나 활동의 밀도를 나타냅니다.</li>
+                <li><strong>skip_passion_index ({val_skip:.2f})</strong>: 스킵 행동의 편차를 보여줍니다. 0에 가까우면 일반인과 큰 차이가 없음을 의미합니다.</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
 
     st.divider()
 
-    # 3.4 Feature Importance Table
-    subheader("list_alt", "3.4 모델 중요 변수 상세 (Feature Importance)")
+    # 3.3 Feature Importance Table
+    subheader("list_alt", "3.3 모델 중요 변수 상세 (Feature Importance)")
     st.caption("모델이 학습 과정에서 어떤 변수에 높은 가중치를 두었는지 보여줍니다.")
 
     # Feature Metadata Mapping
+    # Feature Metadata Mapping
     feature_meta = {
-        "days_since_last_payment": {"desc": "마지막 결제 경과일", "formula": "Target Date - Last Payment Date"},
-        "reg_days": {"desc": "가입 유지 기간(일)", "formula": "Target Date - Registration Date"},
-        "is_auto_renew_last": {"desc": "최근 결제 자동갱신 여부", "formula": "1 if Auto Renew else 0"},
-        "last_payment_method": {"desc": "최근 결제 수단 ID", "formula": "Categorical Encoding"},
-        "avg_amount_per_payment": {"desc": "평균 결제 금액", "formula": "Total Pay / Num Transactions"},
-        "has_ever_cancelled": {"desc": "과거 해지 이력 유무", "formula": "1 if Cancel Count > 0 else 0"},
-        "subscription_months_est": {"desc": "추정 구독 개월 수", "formula": "reg_days / 30.0"},
-        "avg_daily_secs_w30": {"desc": "최근 30일 일평균 청취(초)", "formula": "Sum(secs) / 30"},
-        "days_active_w30": {"desc": "최근 30일 접속 일수", "formula": "Count(unique dates)"},
+        # --- 1. Common Strategic ---
         "active_decay_rate": {"desc": "활동 감소율 (최근 7일 vs 30일)", "formula": "Avg(w7) / Avg(w30)"},
         "listening_velocity": {"desc": "청취 가속도 (14일 변화량)", "formula": "Slope of daily secs (last 14d)"},
-        "skip_passion_index": {"desc": "스킵 열정 지수", "formula": "Skip Count / Total Songs"}
+        "discovery_index": {"desc": "탐색 지수 (새로운 곡 비중)", "formula": "Unique Songs / Total Songs (w7)"},
+        "skip_passion_index": {"desc": "스킵 열정 지수 (불만족도)", "formula": "Skip Count / Total Songs (w7)"},
+        "engagement_density": {"desc": "활동 밀도 (체류 시간)", "formula": "Total Secs / Active Days (w7)"},
+        "last_active_gap": {"desc": "마지막 활동 경과일 (잠수 기간)", "formula": "Target Date - Last Log Date"},
+        
+        # --- 2. Common Profile & History ---
+        "bd_clean": {"desc": "사용자 나이", "formula": "Age (Refined)"},
+        "reg_days": {"desc": "가입 유지 기간(일)", "formula": "Target Date - Registration Date"},
+        "subscription_months_est": {"desc": "추정 구독 개월 수", "formula": "reg_days / 30.0"},
+        "avg_amount_per_payment": {"desc": "평균 결제 금액", "formula": "Total Pay / Num Transactions"},
+        "unique_plan_count": {"desc": "경험한 요금제 수", "formula": "CountDistinct(Plan ID)"},
+        "has_ever_cancelled": {"desc": "과거 해지 이력 유무", "formula": "1 if Cancel Count > 0 else 0"},
+        
+        # --- 3. Common Behavior (Aggregations) ---
+        "num_days_active_w30": {"desc": "최근 30일 접속 일수", "formula": "Count(unique dates)"},
+        "total_secs_w30": {"desc": "최근 30일 총 청취 시간", "formula": "Sum(Total Secs)"},
+        "num_unq_w30": {"desc": "최근 30일 고유 곡 수", "formula": "Sum(Unique Songs)"},
+        "avg_daily_secs_w30": {"desc": "최근 30일 일평균 청취(초)", "formula": "Sum(secs) / 30"},
+        "completion_ratio_w30": {"desc": "최근 30일 곡 완청률", "formula": "Num 100% / Total Songs"},
+        
+        # --- 4. V5.2 Exclusive (Trends) ---
+        "secs_trend_w7_w30": {"desc": "단기 청취 변화량 (w7-w30)", "formula": "Avg(w7) - Avg(w30) (Norm)"},
+        "days_trend_w7_w30": {"desc": "단기 접속 빈도 변화량", "formula": "Avg(w7) - Avg(w30) (Norm)"},
+        "skip_trend_w7_w30": {"desc": "스킵 성향 변화량", "formula": "SkipRatio(w7) - SkipRatio(w30)"},
+        "daily_listening_variance": {"desc": "청취 패턴 불규칙성", "formula": "StdDev(Daily Secs w7)"},
+        
+        # --- 5. V4 Exclusive (Status) ---
+        "days_since_last_payment": {"desc": "마지막 결제 경과일", "formula": "Target Date - Last Payment Date"},
+        "is_auto_renew_last": {"desc": "최근 결제 자동갱신 여부", "formula": "1 if Auto Renew else 0"},
+        "last_payment_method": {"desc": "최근 결제 수단 ID", "formula": "Categorical Encoding"},
+        "days_since_last_cancel": {"desc": "최근 해지 경과일", "formula": "Target Date - Last Cancel"},
+        "is_free_user": {"desc": "무료 유저 여부", "formula": "No Payment History"},
+        "payment_count_last_30d": {"desc": "최근 30일 결제 시도", "formula": "Count(Tx)"},
+        
+        # --- Missing Features Added ---
+        "total_amount_paid": {"desc": "총 누적 결제 금액", "formula": "Sum(Transactions)"},
+        "registered_via": {"desc": "가입 경로 코드", "formula": "Raw Data (Cat)"},
+        "total_payment_count": {"desc": "총 결제 횟수", "formula": "Count(Transactions)"},
+        "payment_count_last_90d": {"desc": "최근 90일 결제 시도", "formula": "Count(Tx) in 90d"}
     }
 
     c_imp1, c_imp2 = st.columns(2)
