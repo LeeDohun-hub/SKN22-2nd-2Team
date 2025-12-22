@@ -42,7 +42,7 @@ def load_and_score():
         
         # Mocking behavioral features if missing (for benchmarking demo)
         if 'listening_velocity' not in df.columns: df['listening_velocity'] = np.random.normal(0, 50, size=len(df))
-        if 'skip_passion_index' not in df.columns: df['skip_passion_index'] = np.random.uniform(0.1, 0.9, size=len(df))
+        if 'secs_trend_w7_w30' not in df.columns: df['secs_trend_w7_w30'] = np.random.normal(-100, 100, size=len(df)) # Mock trend
         if 'active_decay_rate' not in df.columns: df['active_decay_rate'] = np.random.uniform(0.5, 1.5, size=len(df))
         
         return df
@@ -55,6 +55,7 @@ def main():
     
     df = load_and_score()
     if df is None: st.stop()
+    df = df.copy() # Explicit copy to prevent cache mutation issues
     
     st.divider()
     
@@ -128,8 +129,8 @@ def main():
         fig.add_hline(y=sensitivity, line_dash="dash", line_color="black")
         
         # Annotations for Quadrants
-        fig.add_annotation(x=sensitivity/2, y=sensitivity/2, text="Safe", showarrow=False, font=dict(color="green"))
-        fig.add_annotation(x=(1+sensitivity)/2, y=(1+sensitivity)/2, text="Danger", showarrow=False, font=dict(color="red", weight="bold"))
+        fig.add_annotation(x=sensitivity/2, y=sensitivity/2, text="Safe", showarrow=False, font=dict(color="green", size=24, family="Arial Black"))
+        fig.add_annotation(x=(1+sensitivity)/2, y=(1+sensitivity)/2, text="Danger", showarrow=False, font=dict(color="red", size=24, family="Arial Black"))
         
         fig.update_layout(height=500, margin=dict(t=20, b=20), legend=dict(orientation="h", y=1.1))
         st.plotly_chart(fig, use_container_width=True)
@@ -158,7 +159,7 @@ def main():
         # Prepare Data for Chart
         metrics = [
             {"label": "활동 감소율 (Decay)", "col": "active_decay_rate", "desc": "낮을수록 활동 급감"},
-            {"label": "스킵 성향 (Skip)", "col": "skip_passion_index", "desc": "높을수록 스킵 빈번"},
+            {"label": "청취 변화 (Trend)", "col": "secs_trend_w7_w30", "desc": "음수일수록 청취 시간 급감"},
             {"label": "위험 점수 (Risk)", "col": "max_risk", "desc": "최대 이탈 위험도"}
         ]
         
@@ -178,7 +179,7 @@ def main():
         fig_bench.update_layout(height=400, xaxis_title=None, yaxis_title="Average Value",
                                 legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
         
-        st.plotly_chart(fig_bench, use_container_width=True)
+        st.plotly_chart(fig_bench, use_container_width=True, key=f"bench_chart_{top_n}")
         
         # Text Insights
         c_i1, c_i2, c_i3 = st.columns(3)
@@ -196,7 +197,7 @@ def main():
             col.metric(label, f"{t_val:.2f}", f"{arrow} {abs(diff):.2f} (vs Normal)", delta_color="inverse" if inverse else "normal")
 
         show_insight_metric(c_i1, "활동 감소율 (Decay)", "active_decay_rate", inverse=True)
-        show_insight_metric(c_i2, "스킵 성향 (Skip)", "skip_passion_index", inverse=False)
+        show_insight_metric(c_i2, "청취 변화 (Trend)", "secs_trend_w7_w30", inverse=True) # Negative trend is bad (Inverse)
         show_insight_metric(c_i3, "이탈 위험도 (Score)", "max_risk", inverse=False)
     
     st.divider()
